@@ -8,6 +8,7 @@
 #include "constants.h"
 #include "geometry.h"
 #include "meshQuality.h"
+#include <cfloat>
 
 int main() {
     // parallel computing
