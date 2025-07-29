@@ -1,5 +1,6 @@
 #include "meshQuality.h"
 #include <cfloat>
+#include <cmath>
 
 void lapSmth(std::vector<double>& x, const std::vector<std::vector<int>>& adjPts, const int& pNum, const std::vector<int>& pNumM3) {
 #pragma omp parallel for
