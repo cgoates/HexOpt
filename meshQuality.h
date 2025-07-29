@@ -1,7 +1,9 @@
 #pragma once
 
 #include <iostream>
+#ifdef USE_OPENMP
 #include <omp.h>
+#endif
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>

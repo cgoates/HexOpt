@@ -1,6 +1,8 @@
 #include <ctime>
 #include <iostream>
+#ifdef USE_OPENMP
 #include <omp.h>
+#endif
 #include <random>
 #include <unordered_map>
 #include <unordered_set>
