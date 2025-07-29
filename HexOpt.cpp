@@ -8,7 +8,7 @@
 #include "constants.h"
 #include "geometry.h"
 #include "meshQuality.h"
-#include "optimizer.h"
+#include "HexOpt.h"
 #include <cfloat>
 
 namespace HexOpt

@@ -7,7 +7,7 @@ project(HexOpt)
 add_library( HexOpt SHARED
   geometry.cpp
   meshQuality.cpp
-  optimizer.cpp
+  HexOpt.cpp
 )
 
 target_include_directories( HexOpt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} )
@@ -16,3 +16,6 @@ find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
   target_link_libraries(HexOpt PUBLIC OpenMP::OpenMP_CXX)
 endif()
+
+install(TARGETS HexOpt DESTINATION lib)
+install(FILES HexOpt.h DESTINATION include)
