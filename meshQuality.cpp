@@ -1358,7 +1358,7 @@ bool gradient( const std::vector<std::vector<int>>& tri,
                     }
                     else if (hexPtType[surfD3[i]][0] == -1) {
                         double dist, minDist = DBL_MAX, q[3];
-                        for (int j = 1; j < hexPtType[surfD3[i]].size(); ++j) {
+                        for (size_t j = 1; j < hexPtType[surfD3[i]].size(); ++j) {
                             ptLnDist({ x[surf[i]], x[surf[i] + 1], x[surf[i] + 2] },
                                 { edgeFtrX[hexPtType[surfD3[i]][j]][0], edgeFtrX[hexPtType[surfD3[i]][j]][1], edgeFtrX[hexPtType[surfD3[i]][j]][2] },
                                 { edgeFtrX[hexPtType[surfD3[i]][j]][3], edgeFtrX[hexPtType[surfD3[i]][j]][4], edgeFtrX[hexPtType[surfD3[i]][j]][5] },

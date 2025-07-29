@@ -31,16 +31,15 @@ int optimizeMesh( const std::string& trifile, const std::string& hexfile, const 
 
     // read tris
     FILE* dataFile = fopen(triFileName, "r");
-    int triPNum = 1, triENum = 0, ptIdx[8];
+    int triENum = 0, ptIdx[8];
     double pX, pY, pZ;
     char line[256];
     while (!(fgets(line, sizeof(line), dataFile) && sscanf(line, "v %lf %lf %lf", &pX, &pY, &pZ) == 3)) {}
     triX.push_back({ pX, pY, pZ });
     while (fgets(line, sizeof(line), dataFile) && sscanf(line, "v %lf %lf %lf", &pX, &pY, &pZ) == 3) {
         triX.push_back({ pX, pY, pZ });
-        ++triPNum;
     }
-    while (!(sscanf(line, "f %zu %zu %zu", &ptIdx[0], &ptIdx[1], &ptIdx[2]) == 3))
+    while (!(sscanf(line, "f %d %d %d", &ptIdx[0], &ptIdx[1], &ptIdx[2]) == 3))
         fgets(line, sizeof(line), dataFile);
     while (sscanf(line, "f %d %d %d", &ptIdx[0], &ptIdx[1], &ptIdx[2]) == 3) {
         --ptIdx[0];
