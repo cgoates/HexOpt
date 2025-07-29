@@ -31,4 +31,24 @@ void sJGrad(const double& x0, const double& y0, const double& z0,
     const double& sJThres, bool& eFSJ);
 
 // get the gradient of all the points
-bool gradient(const std::vector<std::vector<int>>& tri, const std::vector<std::vector<double>>& triX, const std::vector<std::vector<std::vector<double>>>& triEdgeX, const int& triENum, const std::vector<std::vector<double>>& edgeFtrX, const std::vector<std::vector<int>>& hexPtType, std::vector<double>& x, const std::vector<std::vector<int>>& hex, const int& eNum, const int& pNum3, const std::vector<int>& surf, const std::vector<int>& surfD3, const int& sPNum, const std::vector<int>& sPNumM3, std::vector<double>& surfX, std::vector<double>& totGrad, std::vector<int>& chkElem, const double& sJThres, bool& fitting);
+bool gradient( const std::vector<std::vector<int>>& tri,
+               const std::vector<std::vector<double>>& triX,
+               const std::vector<std::vector<std::vector<double>>>& triEdgeX,
+               const int& triENum,
+               const std::vector<std::vector<double>>& edgeFtrX,
+               const std::vector<std::vector<int>>& hexPtType,
+               std::vector<double>& x,
+               const std::vector<double>& x_start,
+               const std::vector<std::vector<int>>& hex,
+               const int& eNum,
+               const int& pNum3,
+               const std::vector<int>& surf,
+               const std::vector<int>& surfD3,
+               const int& sPNum,
+               const std::vector<int>& sPNumM3,
+               std::vector<double>& surfX,
+               std::vector<double>& totGrad,
+               std::vector<int>& chkElem,
+               const double& sJThres,
+               bool& fitting,
+               const bool& move_bdry_points = false );

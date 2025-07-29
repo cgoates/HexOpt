@@ -8,17 +8,22 @@
 #include "constants.h"
 #include "geometry.h"
 #include "meshQuality.h"
+#include "optimizer.h"
 #include <cfloat>
 
-int main() {
+namespace HexOpt
+{
+int optimizeMesh( const std::string& trifile, const std::string& hexfile, const std::string& ftrfile, const std::string& outputfile )
+{
     // parallel computing
     omp_set_dynamic(1);
 
     // filename
-    const char* triFileName = "isidore_horse.obj";
-    const char* hexFileName = "isidore_horse.vtk";
-    const char* ftrFileName = "mid2Fem.txt";
-    const char* outputHexFileName = "isidore_horse2Opt.vtk";
+
+    const char* triFileName = trifile.c_str();
+    const char* hexFileName = hexfile.c_str();
+    const char* ftrFileName = ftrfile.c_str();
+    const char* outputHexFileName = outputfile.c_str();
     // declare verts and tris
     std::vector<std::vector<int>> tri;
     std::vector<std::vector<double>> triX;
@@ -54,12 +59,12 @@ int main() {
     int i, j;
 
     // declare verts and hexes
-    std::vector<double> x;
-    std::vector<std::vector<int>> hex, adjPts;
+    std::vector<double> x; // The vertex coordinates, in flattened form (x, y, z for each vertex)
+    std::vector<std::vector<int>> hex, adjPts; // The hexes, each defined by 8 vertex indices, and the vertex-vertex adjacency list
 
     // read hex
     dataFile = fopen(hexFileName, "r");
-    int pNum, eNum;
+    int pNum = 0, eNum = 0;
     for (i = 0; i < 4 && fgets(line, sizeof(line), dataFile); ++i) {}
     if (fgets(line, sizeof(line), dataFile) && sscanf(line, "POINTS %d double", &pNum) == 1) {
         for (i = 0; i < pNum; ++i) {
@@ -115,10 +120,32 @@ int main() {
     }
     fclose(dataFile);
     
+    HexMeshInfo hexMeshInfo{ pNum, eNum, hex, x, adjPts };
+    FeatureInfo featureInfo{ edgeFtrX, hexPtType };
+    TriMeshInfo triMeshInfo{ triENum, tri, triX, triEdgeX };
+    return optimizeMesh( hexMeshInfo, featureInfo, triMeshInfo, outputHexFileName);
+}
+
+int optimizeMesh( std::vector<double>& x,
+                  const std::vector<std::vector<int>>& tri,
+                  const std::vector<std::vector<double>>& triX,
+                  const std::vector<std::vector<std::vector<double>>>& triEdgeX,
+                  std::vector<std::vector<int>>& hex,
+                  const std::vector<std::vector<int>>& adjPts,
+                  const std::vector<std::vector<double>>& edgeFtrX,
+                  const std::vector<std::vector<int>>& hexPtType,
+                  const int triENum,
+                  const int eNum,
+                  const int pNum,
+                  const std::string& outputHexFileName,
+                  const bool move_bdry_points = false )
+{
+    const std::vector<double> x_start = x; // store the initial coordinates
     // get surf pts
     std::unordered_map<size_t, std::vector<int>> faceHashTable;// isOnFace
     faceHashTable.reserve(eNum);
     size_t hashVal;
+    int i, j;
     //std::clock_t start = std::clock();
     for (i = 0; i < eNum; ++i)
         for (j = 0; j < 6; ++j) {
@@ -152,7 +179,7 @@ int main() {
 
     // declare optimization vars
     int iter = 0, pNum3 = 3 * pNum;
-    bool eFSJ = false, fitting;
+    bool eFSJ = false, fitting = false;
     double sJThres = -.01;
     std::vector<int> pNumM3(pNum);
 #pragma omp parallel for
@@ -205,16 +232,18 @@ int main() {
     fclose(dataFile);
     exit(-1);*/
 
+    FILE* dataFile;
+
     // optimization
     while (true) {
         // check finish
-        if (eFSJ) {
-            if (fitting) {// uplevel sJ
+        if (eFSJ or ( iter % 1000000 == 0 ) ) {
+            if (fitting or ( iter % 1000000 == 0 ) ) {// uplevel sJ
                 //std::cout << "Converged with min SJ " << -sJThres << std::endl;
                 std::fill(totGrad.begin(), totGrad.end(), 1.0);
 
                 // write to vtk file
-                dataFile = fopen(outputHexFileName, "w");
+                dataFile = fopen(outputHexFileName.c_str(), "w");
                 fprintf(dataFile, "# vtk DataFile Version 2.0\n");
                 fprintf(dataFile, "HexOpt\n");
                 fprintf(dataFile, "ASCII\n");
@@ -227,19 +256,23 @@ int main() {
                 fprintf(dataFile, "CELL_TYPES %i\n", eNum);
                 for (i = 0; i < eNum; ++i) fprintf(dataFile, "%i\n", 12);
                 fclose(dataFile);
-                lapSmth(x, adjPts, pNum, pNumM3);
-                std::cout << iter << ","<<-sJThres<<std::endl;
-                sJThres -= .01;
+                if( fitting and eFSJ )
+                {
+                    lapSmth(x, adjPts, pNum, pNumM3);
+                    std::cout << "optimizer:262 | " << iter << ","<<-sJThres<<std::endl;
+                    sJThres -= .05;
+                    if( sJThres < -0.55 ) break;//ADDED
+                }
             }
         }
 
         // get gradient
         eFSJ = gradient(tri, triX, triEdgeX, triENum,
             edgeFtrX, hexPtType,
-            x, hex, eNum, pNum3,
+            x, x_start, hex, eNum, pNum3,
             surf, surfD3, sPNum, sPNumM3, surfX,
             totGrad, chkElem,
-            sJThres, fitting);
+            sJThres, fitting, move_bdry_points );
         
         // print
         ++iter;
@@ -251,4 +284,15 @@ int main() {
         }
     }
     return 0;
+}
+
+int optimizeMesh( HexMeshInfo& hexMeshInfo,
+                  const FeatureInfo& featureInfo,
+                  const TriMeshInfo& triMeshInfo,
+                  const std::string& outputHexFileName, const bool move_bdry_points )
+{
+    return optimizeMesh(hexMeshInfo.x, triMeshInfo.tri, triMeshInfo.triX, triMeshInfo.triEdgeX,
+        hexMeshInfo.hex, hexMeshInfo.adjPts, featureInfo.edgeFtrX, featureInfo.hexPtType,
+        triMeshInfo.triENum, hexMeshInfo.eNum, hexMeshInfo.pNum, outputHexFileName, move_bdry_points );
+}
 }

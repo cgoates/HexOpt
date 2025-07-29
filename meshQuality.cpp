@@ -1270,11 +1270,33 @@ void sJGrad(const double& x0, const double& y0, const double& z0,
     }
 }
 
-bool gradient(const std::vector<std::vector<int>>& tri, const std::vector<std::vector<double>>& triX, const std::vector<std::vector<std::vector<double>>>& triEdgeX, const int& triENum, const std::vector<std::vector<double>>& edgeFtrX, const std::vector<std::vector<int>>& hexPtType, std::vector<double>& x, const std::vector<std::vector<int>>& hex, const int& eNum, const int& pNum3, const std::vector<int>& surf, const std::vector<int>& surfD3, const int& sPNum, const std::vector<int>& sPNumM3, std::vector<double>& surfX, std::vector<double>& totGrad, std::vector<int>& chkElem, const double& sJThres, bool& fitting) {
+bool gradient( const std::vector<std::vector<int>>& tri,
+               const std::vector<std::vector<double>>& triX,
+               const std::vector<std::vector<std::vector<double>>>& triEdgeX,
+               const int& triENum,
+               const std::vector<std::vector<double>>& edgeFtrX,
+               const std::vector<std::vector<int>>& hexPtType,
+               std::vector<double>& x,
+               const std::vector<double>& x_start,
+               const std::vector<std::vector<int>>& hex,
+               const int& eNum,
+               const int& pNum3,
+               const std::vector<int>& surf,
+               const std::vector<int>& surfD3,
+               const int& sPNum,
+               const std::vector<int>& sPNumM3,
+               std::vector<double>& surfX,
+               std::vector<double>& totGrad,
+               std::vector<int>& chkElem,
+               const double& sJThres,
+               bool& fitting,
+               const bool& move_bdry_points )
+{
     // initialize vars
     int i;
     bool eFSJ = true;
-    double maxGlobDist = 0; int aaaa;
+    double maxGlobDist = 0;
+    int aaaa;
 
     // update chkElem
 #pragma omp parallel for
@@ -1321,43 +1343,52 @@ bool gradient(const std::vector<std::vector<int>>& tri, const std::vector<std::v
 #pragma omp parallel for
         for (i = 0; i < sPNum; ++i)
             if (x[surf[i]] != surfX[sPNumM3[i]] || x[surf[i] + 1] != surfX[sPNumM3[i] + 1] || x[surf[i] + 2] != surfX[sPNumM3[i] + 2]) {
-                if (hexPtType[surfD3[i]][0] == -2) {
-                    surfX[sPNumM3[i]] = triX[hexPtType[surfD3[i]][1]][0];
-                    surfX[sPNumM3[i] + 1] = triX[hexPtType[surfD3[i]][1]][1];
-                    surfX[sPNumM3[i] + 2] = triX[hexPtType[surfD3[i]][1]][2];
+                if( not move_bdry_points )
+                {
+                    surfX[sPNumM3[i]] = x_start[surf[i]];
+                    surfX[sPNumM3[i] + 1] = x_start[surf[i] + 1];
+                    surfX[sPNumM3[i] + 2] = x_start[surf[i] + 2];
                 }
-                else if (hexPtType[surfD3[i]][0] == -1) {
-                    double dist, minDist = DBL_MAX, q[3];
-                    for (int j = 1; j < hexPtType[surfD3[i]].size(); ++j) {
-                        ptLnDist({ x[surf[i]], x[surf[i] + 1], x[surf[i] + 2] },
-                            { edgeFtrX[hexPtType[surfD3[i]][j]][0], edgeFtrX[hexPtType[surfD3[i]][j]][1], edgeFtrX[hexPtType[surfD3[i]][j]][2] },
-                            { edgeFtrX[hexPtType[surfD3[i]][j]][3], edgeFtrX[hexPtType[surfD3[i]][j]][4], edgeFtrX[hexPtType[surfD3[i]][j]][5] },
-                            { edgeFtrX[hexPtType[surfD3[i]][j]][6], edgeFtrX[hexPtType[surfD3[i]][j]][7], edgeFtrX[hexPtType[surfD3[i]][j]][8], edgeFtrX[hexPtType[surfD3[i]][j]][9] },
-                            q, dist);
-                        if (dist < minDist) {
-                            minDist = dist;
-                            surfX[sPNumM3[i]] = q[0];
-                            surfX[sPNumM3[i] + 1] = q[1];
-                            surfX[sPNumM3[i] + 2] = q[2];
+                else
+                {
+                    if (hexPtType[surfD3[i]][0] == -2) {
+                        surfX[sPNumM3[i]] = triX[hexPtType[surfD3[i]][1]][0];
+                        surfX[sPNumM3[i] + 1] = triX[hexPtType[surfD3[i]][1]][1];
+                        surfX[sPNumM3[i] + 2] = triX[hexPtType[surfD3[i]][1]][2];
+                    }
+                    else if (hexPtType[surfD3[i]][0] == -1) {
+                        double dist, minDist = DBL_MAX, q[3];
+                        for (int j = 1; j < hexPtType[surfD3[i]].size(); ++j) {
+                            ptLnDist({ x[surf[i]], x[surf[i] + 1], x[surf[i] + 2] },
+                                { edgeFtrX[hexPtType[surfD3[i]][j]][0], edgeFtrX[hexPtType[surfD3[i]][j]][1], edgeFtrX[hexPtType[surfD3[i]][j]][2] },
+                                { edgeFtrX[hexPtType[surfD3[i]][j]][3], edgeFtrX[hexPtType[surfD3[i]][j]][4], edgeFtrX[hexPtType[surfD3[i]][j]][5] },
+                                { edgeFtrX[hexPtType[surfD3[i]][j]][6], edgeFtrX[hexPtType[surfD3[i]][j]][7], edgeFtrX[hexPtType[surfD3[i]][j]][8], edgeFtrX[hexPtType[surfD3[i]][j]][9] },
+                                q, dist);
+                            if (dist < minDist) {
+                                minDist = dist;
+                                surfX[sPNumM3[i]] = q[0];
+                                surfX[sPNumM3[i] + 1] = q[1];
+                                surfX[sPNumM3[i] + 2] = q[2];
+                            }
                         }
                     }
-                }
-                else {
-                    double dist, minDist = DBL_MAX, q[3];
-                    for (int j = 0; j < triENum; ++j) {
-                        ptTriDist({ x[surf[i]], x[surf[i] + 1], x[surf[i] + 2] },
-                            { triX[tri[j][0]][0], triX[tri[j][0]][1], triX[tri[j][0]][2] },
-                            { triX[tri[j][1]][0], triX[tri[j][1]][1], triX[tri[j][1]][2] },
-                            { triX[tri[j][2]][0], triX[tri[j][2]][1], triX[tri[j][2]][2] },
-                            { triEdgeX[j][0][0], triEdgeX[j][0][1], triEdgeX[j][0][2] },
-                            { triEdgeX[j][1][0], triEdgeX[j][1][1], triEdgeX[j][1][2] },
-                            { triEdgeX[j][2][0], triEdgeX[j][2][1], triEdgeX[j][2][2] },
-                            q, dist);
-                        if (dist < minDist) {
-                            minDist = dist;
-                            surfX[sPNumM3[i]] = q[0];
-                            surfX[sPNumM3[i] + 1] = q[1];
-                            surfX[sPNumM3[i] + 2] = q[2];
+                    else {
+                        double dist, minDist = DBL_MAX, q[3];
+                        for (int j = 0; j < triENum; ++j) {
+                            ptTriDist({ x[surf[i]], x[surf[i] + 1], x[surf[i] + 2] },
+                                { triX[tri[j][0]][0], triX[tri[j][0]][1], triX[tri[j][0]][2] },
+                                { triX[tri[j][1]][0], triX[tri[j][1]][1], triX[tri[j][1]][2] },
+                                { triX[tri[j][2]][0], triX[tri[j][2]][1], triX[tri[j][2]][2] },
+                                { triEdgeX[j][0][0], triEdgeX[j][0][1], triEdgeX[j][0][2] },
+                                { triEdgeX[j][1][0], triEdgeX[j][1][1], triEdgeX[j][1][2] },
+                                { triEdgeX[j][2][0], triEdgeX[j][2][1], triEdgeX[j][2][2] },
+                                q, dist);
+                            if (dist < minDist) {
+                                minDist = dist;
+                                surfX[sPNumM3[i]] = q[0];
+                                surfX[sPNumM3[i] + 1] = q[1];
+                                surfX[sPNumM3[i] + 2] = q[2];
+                            }
                         }
                     }
                 }
